@@ -99,6 +99,7 @@ public class WWViewContainer extends ContainerAdapter {
     
     @Override
     public void rubberBanded(Rectangle b) {
+	System.err.println("rubber banded");
     }
 
     @Override
@@ -135,6 +136,15 @@ public class WWViewContainer extends ContainerAdapter {
     }
 
 
+    /**
+     * The active toolbar button changed.
+     * 
+     * @param activeButton the new active button.
+     */
+    @Override
+    public void activeToolBarButtonChanged(ToolBarToggleButton activeButton) {
+	_view.activeToolBarButtonChanged(activeButton);
+    }
 
 
 }

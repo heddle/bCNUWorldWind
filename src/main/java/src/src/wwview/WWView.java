@@ -11,6 +11,7 @@ import javax.swing.JComponent;
 
 import cnuphys.bCNU.format.DoubleFormat;
 import cnuphys.bCNU.graphics.toolbar.BaseToolBar;
+import cnuphys.bCNU.graphics.toolbar.ToolBarToggleButton;
 import cnuphys.bCNU.view.BaseView;
 import component.ControlPanel;
 import gov.nasa.worldwind.View;
@@ -44,8 +45,8 @@ public class WWView extends BaseView
     
     //the default eye position
     protected Position _defaultEye;
-
-    /**
+    
+   /**
      * Constructor
      * 
      * @param keyVals an optional variable length list of propeties in
@@ -66,6 +67,8 @@ public class WWView extends BaseView
 		~BaseToolBar.CENTERBUTTON &
 		~BaseToolBar.PANBUTTON);
 	add(_baseToolBar, BorderLayout.NORTH);
+	
+	_baseToolBar.getBoxZoomButton().setXorMode(true);
     }
 
     /**
@@ -127,14 +130,27 @@ public class WWView extends BaseView
 
     @Override
     public void mouseClicked(MouseEvent e) {
+	// if we were rubber banding lets consume the event
+	if (isBoxZoomActive()) {
+	    e.consume();
+	}
     }
 
     @Override
     public void mousePressed(MouseEvent e) {
+	// if we were rubber banding lets consume the event
+	if (isBoxZoomActive()) {
+	    _baseToolBar.getBoxZoomButton().mousePressed(e);
+	    e.consume();
+	}
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
+	// if we were rubber banding lets consume the event
+	if (isBoxZoomActive()) {
+	    e.consume();
+	}
     }
 
     @Override
@@ -143,10 +159,15 @@ public class WWView extends BaseView
 
     @Override
     public void mouseExited(MouseEvent e) {
-   }
+    }
 
     @Override
     public void mouseDragged(MouseEvent e) {
+
+	// if we were rubber banding lets consume the event
+	if (isBoxZoomActive()) {
+	    e.consume();
+	}
     }
 
     @Override
@@ -291,6 +312,23 @@ public class WWView extends BaseView
      */
     public void setToolBarText(String s) {
 	_baseToolBar.setText((s == null) ? "" : s);
+    }
+    
+    /**
+     * The active toolbar button changed.
+     * 
+     * @param activeButton the new active button.
+     */
+    protected void activeToolBarButtonChanged(ToolBarToggleButton activeButton) {
+	System.err.println("New active toggle button: " + activeButton.getClass().getName());
+    }
+
+    /**
+     * Checks whether the box zoom is active
+     * @return <code>true</code> if the box zoom button is active
+     */
+    public boolean isBoxZoomActive() {
+	return (_baseToolBar.getActiveButton() == _baseToolBar.getBoxZoomButton());
     }
 
 }
