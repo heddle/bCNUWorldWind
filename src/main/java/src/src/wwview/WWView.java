@@ -17,8 +17,11 @@ import component.ControlPanel;
 import gov.nasa.worldwind.View;
 import gov.nasa.worldwind.WorldWindow;
 import gov.nasa.worldwind.geom.Angle;
+import gov.nasa.worldwind.geom.Line;
 import gov.nasa.worldwind.geom.Position;
+import gov.nasa.worldwind.geom.Vec4;
 import gov.nasa.worldwind.globes.Globe;
+import gov.nasa.worldwind.view.ViewUtil;
 
 public class WWView extends BaseView
 	implements MouseListener, MouseMotionListener {
@@ -185,15 +188,28 @@ public class WWView extends BaseView
     //common feedback
     private void commonFeedback(MouseEvent e, Position position) {
 
-//	fbString("cyan", 
-//		"mouse (" + e.getX() + ", " + e.getY() + ")", 
-//		_feedbackStrings);
+	fbString("cyan", 
+		"mouse (" + e.getX() + ", " + e.getY() + ")", 
+		_feedbackStrings);
 	
 	if (position == null) {
 	    setToolBarText(null);
 	    fbString("red", "not on globe", _feedbackStrings);
+	    
 	}
 	else {
+	    StringBuffer sb2 = new StringBuffer(128);
+	    Position testP = computePositionFromScreenPoint(e.getX(), e.getY());
+	    String slat2 = position.getLatitude().toDecimalDegreesString(2);
+	    String slon2 = position.getLongitude().toDecimalDegreesString(2);
+	    double elev2 = position.getElevation();
+
+	    sb2.append("(" + slat2 + ", " + slon2 + ") " + " elev: "
+		    + distanceString(elev2, 1));
+	    fbString("yellow", sb2.toString(), _feedbackStrings);
+
+	    
+	    
 	    StringBuffer sb = new StringBuffer(128);
 	    String slat = position.getLatitude().toDecimalDegreesString(2);
 	    String slon = position.getLongitude().toDecimalDegreesString(2);
@@ -330,5 +346,16 @@ public class WWView extends BaseView
     public boolean isBoxZoomActive() {
 	return (_baseToolBar.getActiveButton() == _baseToolBar.getBoxZoomButton());
     }
+    
+    /**
+     * Compute the position from a screen point. Like a local-to-world.
+     * @param x the x pixel
+     * @param y the y pixel
+     * @return the position
+     */
+    public Position computePositionFromScreenPoint(int x, int y) {
+	return getWWView().computePositionFromScreenPoint(x, y);
+    }
+
 
 }
