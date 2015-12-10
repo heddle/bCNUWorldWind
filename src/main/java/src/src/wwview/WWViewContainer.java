@@ -13,6 +13,7 @@ import cnuphys.bCNU.graphics.toolbar.BaseToolBar;
 import cnuphys.bCNU.graphics.toolbar.ToolBarToggleButton;
 import cnuphys.bCNU.graphics.world.WorldPolygon;
 import cnuphys.bCNU.view.BaseView;
+import gov.nasa.worldwind.geom.Angle;
 import gov.nasa.worldwind.geom.Position;
 
 public class WWViewContainer extends ContainerAdapter {
@@ -81,7 +82,6 @@ public class WWViewContainer extends ContainerAdapter {
 
     @Override
     public void scale(double scaleFactor) {
-	System.err.println("SCALING");
 	_currentEye = _view.getEyePosition();
 	double alt = _currentEye.getAltitude()*scaleFactor;
 	Position eye = new Position(_currentEye.latitude, _currentEye.longitude, alt);
@@ -99,8 +99,36 @@ public class WWViewContainer extends ContainerAdapter {
     
     @Override
     public void rubberBanded(Rectangle b) {
-	System.err.println("rubber banded");
-    }
+	_currentEye = _view.getEyePosition();
+	Position p1 = _view.computePositionFromScreenPoint(b.x, b.y);
+	Position p2 = _view.computePositionFromScreenPoint(b.x+b.width, b.y+b.height);
+	
+	Angle minLat;
+	Angle minLon;
+	Angle maxLat;
+	Angle maxLon;
+	
+	if (p1.latitude.degrees < p1.latitude.degrees) {
+	    minLat = p1.latitude;
+	    maxLat = p2.latitude;
+	}
+	else {
+	    minLat = p2.latitude;
+	    maxLat = p1.latitude;
+	}
+	
+	if (p1.longitude.degrees < p1.longitude.degrees) {
+	    minLon = p1.longitude;
+	    maxLon = p2.longitude;
+	}
+	else {
+	    minLon = p2.longitude;
+	    maxLon = p1.longitude;
+	}
+	
+	_view.zoomToSector(minLat, minLon, maxLat, maxLon);
+	refresh();
+   }
 
     @Override
     public BaseToolBar getToolBar() {

@@ -1,6 +1,9 @@
 package wwview;
 
+import javax.swing.JMenuBar;
+
 import cnuphys.bCNU.util.PropertySupport;
+import component.LayersMenu;
 import gov.nasa.worldwind.geom.Angle;
 import wwcomponent.GlobePanel;
 
@@ -24,5 +27,17 @@ public class GlobeView extends WWView {
 	_wwWindow = _wwGlobePanel;
 	 prepare(_wwGlobePanel, _wwGlobePanel, Angle.ZERO, Angle.ZERO, 11520000);
    }
+
+    /**
+     * Add menus here
+     */
+    @Override
+    protected void makeMenus() {
+	_menuBar = new JMenuBar();
+	setJMenuBar(_menuBar);
+	
+	//layers menu
+	_menuBar.add(new LayersMenu(_wwWindow));
+    }
 
 }

@@ -2,14 +2,12 @@ package wwview;
 
 import java.awt.BorderLayout;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
 import java.util.List;
 import java.util.Vector;
 
 import javax.swing.JComponent;
+import javax.swing.JMenuBar;
 
-import cnuphys.bCNU.format.DoubleFormat;
 import cnuphys.bCNU.graphics.toolbar.BaseToolBar;
 import cnuphys.bCNU.graphics.toolbar.ToolBarToggleButton;
 import cnuphys.bCNU.view.BaseView;
@@ -17,14 +15,13 @@ import component.ControlPanel;
 import gov.nasa.worldwind.View;
 import gov.nasa.worldwind.WorldWindow;
 import gov.nasa.worldwind.geom.Angle;
-import gov.nasa.worldwind.geom.Line;
+import gov.nasa.worldwind.geom.Extent;
+import gov.nasa.worldwind.geom.LatLon;
 import gov.nasa.worldwind.geom.Position;
-import gov.nasa.worldwind.geom.Vec4;
+import gov.nasa.worldwind.geom.Sector;
 import gov.nasa.worldwind.globes.Globe;
-import gov.nasa.worldwind.view.ViewUtil;
 
-public class WWView extends BaseView
-	implements MouseListener, MouseMotionListener {
+public class WWView extends BaseView {
 
     protected static final int defaultFBWidth = 250;
 
@@ -49,6 +46,15 @@ public class WWView extends BaseView
     //the default eye position
     protected Position _defaultEye;
     
+    //the feed back handler
+    protected ViewFeedback _viewFeedback;
+    
+    //the main menu bar
+    protected JMenuBar _menuBar;
+    
+    //mouse handler
+    protected ViewMouseHandler _mouseHandler;
+        
    /**
      * Constructor
      * 
@@ -65,13 +71,20 @@ public class WWView extends BaseView
 	//the toolbar
 	_baseToolBar = new BaseToolBar(_container, 
 		BaseToolBar.NODRAWING & 
+		BaseToolBar.RECTGRIDBUTTON &
 		~BaseToolBar.MAGNIFYBUTTON &
 		~BaseToolBar.CONTROLPANELBUTTON &
 		~BaseToolBar.CENTERBUTTON &
 		~BaseToolBar.PANBUTTON);
 	add(_baseToolBar, BorderLayout.NORTH);
+		
+	//feedback handler
+	_viewFeedback = new ViewFeedback(this);
 	
+	//use overlay window to do rubberbanding
 	_baseToolBar.getBoxZoomButton().setXorMode(true);
+	
+	_mouseHandler = new ViewMouseHandler(this);
     }
 
     /**
@@ -86,14 +99,23 @@ public class WWView extends BaseView
 	    Angle eyeLat, Angle eyeLon, double eyeAlt) {
 	_wwWindow = wwwindow;
 	_mainComponent = comp;
-	_wwWindow.getInputHandler().addMouseListener(this);
-	_wwWindow.getInputHandler().addMouseMotionListener(this);
+	_wwWindow.getInputHandler().addMouseListener(_mouseHandler);
+	_wwWindow.getInputHandler().addMouseMotionListener(_mouseHandler);
 
 	//show the whole earth
 	_defaultEye = new Position(eyeLat, eyeLon, eyeAlt);
 	getWWView().setEyePosition(_defaultEye);
 
 	add(comp, BorderLayout.CENTER);
+	
+	//make the menus
+	makeMenus();
+    }
+    
+    /**
+     * Add menus here
+     */
+    protected void makeMenus() {
     }
 
     // create the control panel
@@ -131,147 +153,15 @@ public class WWView extends BaseView
 	return ((view == null) ? null : view.getGlobe());
     }
 
-    @Override
-    public void mouseClicked(MouseEvent e) {
-	// if we were rubber banding lets consume the event
-	if (isBoxZoomActive()) {
-	    e.consume();
-	}
-    }
-
-    @Override
-    public void mousePressed(MouseEvent e) {
-	// if we were rubber banding lets consume the event
-	if (isBoxZoomActive()) {
-	    _baseToolBar.getBoxZoomButton().mousePressed(e);
-	    e.consume();
-	}
-    }
-
-    @Override
-    public void mouseReleased(MouseEvent e) {
-	// if we were rubber banding lets consume the event
-	if (isBoxZoomActive()) {
-	    e.consume();
-	}
-    }
-
-    @Override
-    public void mouseEntered(MouseEvent e) {
-    }
-
-    @Override
-    public void mouseExited(MouseEvent e) {
-    }
-
-    @Override
-    public void mouseDragged(MouseEvent e) {
-
-	// if we were rubber banding lets consume the event
-	if (isBoxZoomActive()) {
-	    e.consume();
-	}
-    }
-
-    @Override
-    public void mouseMoved(MouseEvent e) {
-	
-	Position position = _wwWindow.getCurrentPosition();
-	if (!(e.isControlDown())) {
-	    _feedbackStrings.clear();
-	    commonFeedback(e, position);
-	    customFeedback(_feedbackStrings, e, position);
-	    _controlPanel.getFeedbackPane().updateFeedback(_feedbackStrings);
-	}
-    }
-
-    //common feedback
-    private void commonFeedback(MouseEvent e, Position position) {
-
-	fbString("cyan", 
-		"mouse (" + e.getX() + ", " + e.getY() + ")", 
-		_feedbackStrings);
-	
-	if (position == null) {
-	    setToolBarText(null);
-	    fbString("red", "not on globe", _feedbackStrings);
-	    
-	}
-	else {
-	    StringBuffer sb2 = new StringBuffer(128);
-	    Position testP = computePositionFromScreenPoint(e.getX(), e.getY());
-	    String slat2 = position.getLatitude().toDecimalDegreesString(2);
-	    String slon2 = position.getLongitude().toDecimalDegreesString(2);
-	    double elev2 = position.getElevation();
-
-	    sb2.append("(" + slat2 + ", " + slon2 + ") " + " elev: "
-		    + distanceString(elev2, 1));
-	    fbString("yellow", sb2.toString(), _feedbackStrings);
-
-	    
-	    
-	    StringBuffer sb = new StringBuffer(128);
-	    String slat = position.getLatitude().toDecimalDegreesString(2);
-	    String slon = position.getLongitude().toDecimalDegreesString(2);
-	    double elev = position.getElevation();
-
-	    sb.append("(" + slat + ", " + slon + ") " + " elev: "
-		    + distanceString(elev, 1));
-
-	    setToolBarText(sb.toString());
-	    fbString("cyan", positionString(position, 3), _feedbackStrings);
-	}
-    }
-
-    //custom view specific feedback
-    protected void customFeedback(List<String> fbs, MouseEvent e, Position position) {
-
-    }
-
-    // convenience method to create a feedback string with color
-    protected void fbString(String color, String str, List<String> fbstrs) {
-	fbstrs.add("$" + color + "$" + str);
-    }
-    
-    //get the position string
-    protected String positionString(Position position, int numDec) {
-	if (position == null) {
-	    return "";
-	}
-	StringBuffer sb = new StringBuffer(128);
-	String slat = position.getLatitude().toDecimalDegreesString(numDec);
-	String slon = position.getLongitude().toDecimalDegreesString(numDec);
-	double elev = position.getElevation();
-	
-
-	sb.append("(" + slat + ", " + slon + ") " +
-		" elev: " + distanceString(elev, 1) );
-	
-	Position eyePosition = getWWView().getEyePosition();
-	slat = eyePosition.getLatitude().toDecimalDegreesString(numDec);
-	slon = eyePosition.getLongitude().toDecimalDegreesString(numDec);
-	double alt = eyePosition.getAltitude();
-	sb.append("\neye: (" + slat + ", " + slon + ") " +
-		" alt: " + distanceString(alt, 1));
-	
-	return sb.toString();
-    }
-
     /**
-     * Get a distance string
-     * @param dist the distance in meters
-     * @param numDec the number of decimal points
-     * @return a distance string that might be in km or m
-     */
-    protected String distanceString(double dist, int numDec) {
-	if (dist > 9999.99) {
-	    return DoubleFormat.doubleFormat(dist/1000, numDec+2) + " km";
-	}
-	else {
-	    return DoubleFormat.doubleFormat(dist, numDec) + " m";
-	}
+     * Custom view specific feedback. Subclasses should override.
+     * @param fbs the list of strings
+     * @param e the causal mouse event
+     * @param position the current mouse (world wind) position
+    */
+    protected void customFeedback(List<String> fbs, MouseEvent e, Position position) {
     }
-    
+
     /**
      * Get the main component (the map)
      * @return the main component
@@ -284,6 +174,7 @@ public class WWView extends BaseView
      * Get the base tool bar
      * @return the toobar
      */
+    @Override
     public BaseToolBar getToolBar() {
 	return _baseToolBar;
     }
@@ -348,14 +239,74 @@ public class WWView extends BaseView
     }
     
     /**
+     * Checks whether the rect grid is active
+     * @return <code>true</code> if the rect grid button is active
+     */
+    public boolean isRectGridActive() {
+	return (_baseToolBar.getActiveButton() == _baseToolBar.getRectGridButton());
+    }
+    
+    /**
      * Compute the position from a screen point. Like a local-to-world.
      * @param x the x pixel
      * @param y the y pixel
-     * @return the position
+     * @return the position (lat, lon, elev)
      */
     public Position computePositionFromScreenPoint(int x, int y) {
 	return getWWView().computePositionFromScreenPoint(x, y);
     }
 
+    /**
+     * Get the control panel
+     * @return the control panel
+     */
+    public ControlPanel getControlPanel() {
+	return _controlPanel;
+    }
+    
+    /**
+     * Zoom to a given sector
+     * @param lat1 the min latitude
+     * @param lon1 the min longitude
+     * @param lat2 the max latitude
+     * @param lon2 the max longitude
+     */
+    public void zoomToSector(Angle lat1, Angle lon1, Angle lat2, Angle lon2) {
+	
+	LatLon ll1 = new LatLon(lat1, lon1);
+	LatLon ll2 = new LatLon(lat2, lon2);
+	Sector sector = Sector.boundingSector(ll1, ll2);
+	Globe globe = getGlobe();
+	double ve = getWorldWindow().getSceneController().getVerticalExaggeration();
 
+	double[] minAndMaxElevations = globe.getMinAndMaxElevations(sector);
+	double minElevation = minAndMaxElevations[0];
+//	double maxElevation = Math.max(minAndMaxElevations[1], maxAltitude);
+	double maxElevation = minAndMaxElevations[1];
+
+	Extent extent = Sector.computeBoundingCylinder(globe, ve, sector, minElevation, maxElevation);
+	if (extent == null) {
+	    return;
+	}
+
+	Angle fov = getWWView().getFieldOfView();
+
+	LatLon cll =  sector.getCentroid();
+	Position centerPos = Position.fromDegrees(cll.latitude.degrees, cll.longitude.degrees);
+	
+	double zoom = extent.getRadius() / (fov.tanHalfAngle() * fov.cosHalfAngle());
+
+	getWWView().goTo(centerPos, zoom);	
+    }
+    
+    //get the collection of feedback strings
+    protected List<String> getFeedbackStringCollection() {
+	return _feedbackStrings;
+    }
+    
+    //get the view feedback
+    protected ViewFeedback getViewFeedback() {
+	return _viewFeedback;
+    }
+    
 }
