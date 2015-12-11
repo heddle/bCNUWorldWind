@@ -5,7 +5,7 @@ import gov.nasa.worldwind.awt.WorldWindowGLJPanel;
 
 public class GlobePanel extends WorldWindowGLJPanel {
 
-    public GlobePanel() {
-	setModel(new BasicModel());
-    }
+	public GlobePanel() {
+		setModel(new BasicModel());
+	}
 }

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src/src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="/Users/heddle/worldwind-daily-1596/worldwind.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/bCNU"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
